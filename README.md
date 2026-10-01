@@ -1,303 +1,156 @@
-# GKID Kernel
+# ⚡ GKID Kernel (Tab S10 Ultra Edition)
 
 <p align="center">
   <img src="docs/banner.png" alt="GKID Kernels Banner">
 </p>
 
-[![Build Status](https://github.com/ahmed-alnassif/GKID-Kernels/actions/workflows/build.yml/badge.svg)](https://github.com/ahmed-alnassif/GKID-Kernels/actions/workflows/build.yml)
-[![Latest Release](https://img.shields.io/github/v/release/ahmed-alnassif/GKID-Kernels?label=Latest%20Release&color=00aa00)](https://github.com/ahmed-alnassif/GKID-Kernels/releases)
-[![Downloads](https://img.shields.io/github/downloads/ahmed-alnassif/GKID-Kernels/total?label=Downloads&color=00aa00)](https://github.com/ahmed-alnassif/GKID-Kernels/releases)
-[![Group](https://img.shields.io/badge/Telegram-Group-blue.svg?logo=telegram)](https://t.me/ahmed_alnassif_tg)
-[![GitHub License](https://img.shields.io/github/license/ahmed-alnassif/GKID-Kernels?logo=gnu)](/LICENSE)
-[![SuSFS](https://img.shields.io/badge/SuSFS-4CAF50?&logo=gitlab&logoColor=white)](https://gitlab.com/simonpunk/susfs4ksu)
-[![KernelSU](https://img.shields.io/badge/KernelSU-000000?&logo=github&logoColor=white)](https://github.com/tiann/KernelSU)
-[![ReSukiSU](https://img.shields.io/badge/ReSukiSU-E91E63?&logo=github&logoColor=white)](https://github.com/ReSukiSU/ReSukiSU)
-[![Managers](https://img.shields.io/badge/Managers-multiple-success)](https://github.com/ahmed-alnassif/GKID-Kernels/releases)
+[![Fork](https://img.shields.io/badge/Project-Downstream%20Fork-blueviolet?style=for-the-badge&logo=git&logoColor=white)](#-about-this-fork)
+[![Device](https://img.shields.io/badge/Device-Galaxy%20Tab%20S10%20Ultra-007ec6?style=for-the-badge&logo=samsung&logoColor=white)](#-target-device--specifications)
+[![Processor](https://img.shields.io/badge/SoC-Dimensity%209300-orange?style=for-the-badge&logo=mediatek&logoColor=white)](#-target-device--specifications)
+[![Root](https://img.shields.io/badge/KernelSU--Next-Supported-10b981?style=for-the-badge&logo=linux&logoColor=white)](https://kernelsu.org)
+[![SuSFS](https://img.shields.io/badge/SuSFS-v1.5.5-7c3aed?style=for-the-badge&logo=gitlab&logoColor=white)](#-integrated-patches--versions)
+[![Telegram](https://img.shields.io/badge/Telegram-@FADELEES-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/FADELEES)
 
-**⚡ Blazing fast GKI kernel for Android** with KernelSU, SuSFS, NetHunter, NTSync, performance optimizations, battery improvements, and advanced security features.
+**⚡ High-performance, low-latency downstream GKI kernel fork** tailored specifically for the **Samsung Galaxy Tab S10 Ultra (MediaTek Dimensity 9300)**. Packed with KernelSU-Next, SuSFS, FullLTO, gaming-oriented scheduler tunings, and enhanced deep-sleep battery optimizations.
 
 ---
 
-> [!Important]
-> - This is a **GKI** kernel, not a custom kernel. It works on **ANY** device that ships with a matching GKI Linux version.
-> - Supported GKI versions: **5.10, 5.15, 6.1, 6.6, 6.12** (see [Supported GKI Kernel Versions](#-supported-gki-kernel-versions) below).
+## 📌 About This Fork
+
+> [!NOTE]
+> This repository is an independent **downstream fork** of the original [GKID-Kernels by ahmed-alnassif](https://github.com/ahmed-alnassif/GKID-Kernels). 
+> - While upstream targets generic multi-version GKI devices, **this fork is specifically refactored, stripped of obsolete patches, and finely tuned for the MediaTek Dimensity 9300 All-Big-Core architecture and UFS 4.0 storage on the Galaxy Tab S10 Ultra.**
+> - Full credit goes to **Ahmed Al-Nassif** and the upstream Android Common Kernel (ACK) contributors.
 
 ---
 
-## ❤️ Support This Project
+## 📱 Target Device & Specifications
 
-**[Donations](https://github.com/ahmed-alnassif#-support-my-work)**
-
-Your donations keep this project alive! I spend countless hours maintaining kernel builds for 5 different versions, fixing bugs, adding features, and supporting users. **Every donation matters!** 🙏
-
----
-
-## ✨ ReSuSFS 
-
-**[ReSuSFS](https://github.com/ahmed-alnassif/ReSuSFS)** – Root hiding made simple, powerful when you need it. A [KernelSU](https://kernelsu.org) module and WebUI that turns SuSFS into clean config files and toggle switches for everyday use, with **strong hiding applied out of the box** via built-in spoofing and hiding scripts for one-tap protection, plus a script manager for power users who want more, all without leaving the WebUI.
+| Property | Details |
+| :--- | :--- |
+| **Target Device** | Samsung Galaxy Tab S10 Ultra (Wi-Fi & 5G variants) |
+| **SoC** | MediaTek Dimensity 9300 (4× Cortex-X4 + 4× Cortex-A720) |
+| **GPU** | ARM Immortalis-G720 MC12 |
+| **Storage Type** | UFS 4.0 (F2FS `/data` partition) |
+| **Kernel Base** | Android Generic Kernel Image (GKI) |
 
 ---
 
-## ⚡ Quick Start
+## 🧩 Integrated Patches & Versions
 
-1. **Check** your kernel version in Settings → About Phone
-2. **Download** matching variant from [Releases](https://github.com/ahmed-alnassif/GKID-Kernels/releases)
-3. **Flash** using KernelSU app or custom recovery
-4. **Manage** SuSFS with [ReSuSFS](https://github.com/ahmed-alnassif/ReSuSFS)
-
----
-
-## 📱 Supported GKI Kernel Versions
-
-| Linux | Android |
-|-------|---------|
-| 5.10  | 12      |
-| 5.15  | 13      |
-| 6.1   | 14      |
-| 6.6   | 15      |
-| 6.12  | 16      |
+| Patch / Component | Version / Branch | Purpose |
+| :--- | :--- | :--- |
+| **KernelSU-Next** | `v1.0.5` (Next branch) | Kernel-space root implementation with low overhead and modern hooks. |
+| **SuSFS** | `v1.5.5` | Kernel-level VFS hiding and mount isolation against hardware root detection. |
+| **TCP BBRv3** | `v3 (Upstream backport)` | Google's congestion control algorithm for minimal jitter and stable gaming ping. |
+| **AnyKernel3** | `v3.0` | Universal packaging backend for clean flashable zip deployment. |
 
 ---
 
-## 🔧 Build Variants
-
-| Variant | Root | SuSFS | LTO | Compat |
-|---------|------|-------|-----|--------|
-| Vanilla | ❌ | ❌ | Full | ❌ |
-| Vanilla+NoLTO | ❌ | ❌ | ❌ | ❌ |
-| KernelSU | ✅ | ❌ | Full | ❌ |
-| KernelSU+SuSFS | ✅ | ✅ | Full | ❌ |
-| KSU+SuSFS+MM | ✅ | ✅ | Full | ❌ |
-| ReSukiSU+SuSFS | ✅ | ✅ | Full | ❌ |
-| Compat+KSU+SuSFS | ✅ | ✅ | ❌ | ✅ |
-| Compat+ReSukiSU+SuSFS | ✅ | ✅ | ❌ | ✅ |
-
-**Optional features** (enable on any variant):
-- 🐳 DroidSpaces - Linux userspace support
-- 🐉 NetHunter - Wireless penetration testing
-- 🥷 NoMount - NoMount integration
-
----
-
-## Performance
+## ⚡ Performance & Gaming
 
 | Feature | Description |
-|---------|-------------|
-| **300Hz Timer** | Reduced input latency for snappier UI response |
-| **MGLRU** | Multi-generational LRU for smoother multitasking |
-| **zRAM** | LZ4 compression with writeback for memory efficiency |
-| **CPU Governors** | schedutil + ondemand for smart power scaling |
-| **I/O Scheduler** | mq-deadline optimized for UFS 4.0 storage |
-| **F2FS Tuning** | 50ms GC sleep for buttery smooth I/O |
-| **Memory Optimizations** | 50% faster memcpy/memset/memcmp operations |
-| **ext4 Tuning** | Extended commit age reducing unnecessary writes |
-| **NTSync Driver** | Faster Windows games/apps on Winlator/GameHub |
+| :--- | :--- |
+| **Aggressive EAS Tuning** | Tuned `sugov_ext` rate limits for instant CPU frequency ramp-up during frame spikes. |
+| **All-Big-Core Thread Affinity** | Prioritizes render and game engine threads directly onto Cortex-X4 cores. |
+| **Zero-Overhead UFS 4.0 I/O** | `none` I/O scheduler bypasses queue latency on ultra-fast UFS 4.0 storage. |
+| **F2FS GC Suppression** | Silences aggressive garbage collection during active screen-on time to eliminate micro-stutters. |
+| **Optimized zRAM Overhead** | Tuned memory compression parameters to eliminate CPU decompression stalls during heavy loads. |
+| **Stripped Debug Overhead** | Disabled `CONFIG_FTRACE`, debugfs, and excess tracing bloat to free raw CPU cycles for games. |
+| **FullLTO Compilation** | Built with Full Link-Time Optimization via Clang/LLVM for maximum pipeline efficiency. |
 
 **What this means for you:**
-- Apps launch faster
-- UI feels more responsive
-- Gaming has less stutter
-- Multitasking is smoother
-- Better framerates in games
+- Rock-solid 120 FPS in competitive titles (*Call of Duty: Mobile*, etc.)
+- Zero micro-stutters during intensive combat and scene rendering
+- Snappier app launch times and instant touch response
+- Eliminates I/O bottlenecks without wearing down flash storage
 
 ---
 
 ## 🔋 Battery Life
 
 | Feature | Description |
-|---------|-------------|
-| **Wakelock Cap** | 500ms cap prevents excessive battery drain |
-| **Freeze Timeout** | 20s → 1s for faster deadlock detection |
-| **F2FS Optimization** | Reduced GC overhead saves CPU cycles |
-| **Alarm Wakeups** | Minimized to reduce standby battery drain |
-| **ext4 Commit Age** | 30s commit age reduces write operations |
-| **Power Management** | Improved suspend/resume for better idle drain |
+| :--- | :--- |
+| **Wakelock Ceiling** | Enforced 500ms wakelock limit to prevent runaway background service drain. |
+| **Freeze Timeout** | Reduced task freeze timeout (20s → 1s) for faster sleep entry and deadlock detection. |
+| **F2FS Sleep Tuning** | Minimized idle Garbage Collection cycles to save power when the device is idle. |
+| **Alarm Timers** | Coalesced non-urgent background wakeups to reduce active wake periods. |
+| **Suspend Engine** | Optimized platform-level suspend/resume routines for minimal screen-off drain. |
 
 **What this means for you:**
-- Better standby time
-- Less battery drain during use
-- Overnight battery lasts longer
-- Gaming doesn't kill battery as fast
-- All-day battery life
+- Exceptional standby time and minimal overnight battery drop
+- Cool and efficient operation during multi-tasking
+- Long gaming sessions without sudden thermal throttling cliffs
+- Dependable all-day battery endurance
 
 ---
 
 ## 🌐 Networking
 
 | Feature | Description |
-|---------|-------------|
-| **TCP BBRv3** | Default congestion control for maximum speed |
-| **Westwood+** | Alternative congestion control for WiFi |
-| **FQ CoDel** | Fair queuing with controlled delay |
-| **IP Set** | Efficient IP/network address management |
-| **IPv4/IPv6 NAT** | Full NAT support for tethering |
-| **IPsec/ESP** | VPN and secure tunneling support |
-| **Netfilter** | Advanced firewall and packet filtering |
-
-**What this means for you:**
-- Faster WiFi and mobile data
-- Better VPN performance
-- Improved tethering speeds
-- Lower gaming latency
-- Smoother streaming
+| :--- | :--- |
+| **TCP BBRv3** | Default congestion control algorithm for low-latency network performance. |
+| **FQ CoDel** | Fair queuing with controlled delay to combat bufferbloat. |
+| **IP Set & Netfilter** | Advanced firewall and packet filtering capabilities. |
+| **IPv4/IPv6 WireGuard** | High-performance VPN tunneling support directly inside the kernel. |
 
 ---
 
-## 🛡️ Security
+## 🛡️ Security & Root Hiding
 
 | Feature | Description |
-|---------|-------------|
-| **SuSFS** | Advanced filesystem and process hiding |
-| **Baseband Guard** | Blocks unauthorized partition writes |
-| **Kernel LSM** | SELinux + Baseband Guard integration |
-| **Symbol Hiding** | Kernel symbol protection from detection |
-| **uname Spoofing** | System information hiding |
-| **Open Redirect** | Protected file operations |
-| **SUS MAP/PATH/MOUNT** | Complete filesystem hiding |
-
-**What this means for you:**
-- Stronger root hiding
-- Better banking app compatibility
-- Improved security against detection
-- Safe from unauthorized system modifications
+| :--- | :--- |
+| **KernelSU-Next** | Stable kernel-based root with modern API support and minimal attack surface. |
+| **SuSFS Integration** | Advanced filesystem and mount hiding against app-level integrity checks. |
+| **SUS MAP/PATH/MOUNT** | Kernel-level isolation preventing path detection by banking and integrity apps. |
+| **Play Integrity Ready** | Compatible with modern attestation frameworks and device verification modules. |
 
 ---
 
-## 🔑 Root Management
+## 📥 Downloads & Artifacts
 
-| Feature | Description |
-|---------|-------------|
-| **KernelSU** | Stable kernel-based root with excellent hiding |
-| **ReSukiSU** | ReSukiSU kernel integration |
-| **Multiple Managers** | Run multiple KernelSU managers simultaneously |
-| **Vanilla** | No root for banking and corporate apps |
+All releases are available on the [**GitHub Releases**](https://github.com/ifoknr/GKID-Kernels/releases) page:
 
-**What this means for you:**
-- Reliable root access
-- Apps don't detect root
-- Pass SafetyNet/Play Integrity
-- Choose your root implementation
+* 📦 **`GKID-Kernel-*.zip`**: AnyKernel3 flashable archive (Recommended).
+* 🖼️ **`boot-*.img`**: Raw GKI boot partition image for recovery/manual backup restoration.
 
 ---
 
-## 🎮 NTSync
+## 🛠️ Installation Guide (Kernel Flasher)
 
-Linux NTSYNC interface for Windows gaming:
-- Winlator
-- GameHub
-- ExaGear
-- Other Windows emulation
+> [!CAUTION]
+> **MANDATORY BACKUP REQUIRED BEFORE FLASHING:**  
+> Modifying your kernel involves risks. **You MUST back up your stock `boot` (and `init_boot` if present) partition before flashing.** If you encounter a bootloop, restoring your backup via Kernel Flasher or fastboot is your safe return path.
 
-**What this means for you:**
-- Better Windows game performance
-- Lower latency in emulators
-- GKI compatibility patches included
+### Requirements:
+1. Samsung Galaxy Tab S10 Ultra running a compatible stock firmware base.
+2. Root access via KernelSU-Next or Magisk.
+3. **Kernel Flasher** app by *capntrips*: [Download Kernel Flasher](https://github.com/capntrips/KernelFlasher/releases).
 
----
+### Flashing Steps:
 
-## 🐳 DroidSpaces
-
-Complete Linux userspace support:
-- System V IPC and POSIX message queues
-- IPC and PID namespaces
-- devtmpfs with xattrs
-- POSIX ACLs
-- Netfilter and IP Set
-- UFW and Fail2ban requirements
-
-**What this means for you:**
-- Run Linux apps on Android
-- Better container support
-- Chroot and proot work better
+1. **Take a Backup First:**
+   - Open **Kernel Flasher** and grant it Superuser (Root) permissions.
+   - Navigate to the **Backup** tab.
+   - Tap **Create Backup** to dump your stock boot image to your internal storage. Keep this safe!
+2. **Flash the Kernel Zip:**
+   - Download the latest **`GKID-Kernel-*.zip`** from [Releases](https://github.com/ifoknr/GKID-Kernels/releases).
+   - In **Kernel Flasher**, go to the **Flash** section and select the downloaded `.zip` file.
+   - Review the flashing log and ensure the script finishes with success (`Done!`).
+3. **Reboot:**
+   - Tap **Reboot** to restart your device.
+   - Verify kernel installation in **Settings → About Tablet → Software Information → Kernel Version**.
 
 ---
 
-## 🐉 NetHunter
+## 💬 Community & Support
 
-Wireless penetration testing features:
-- cfg80211, mac80211, RFKILL
-- Realtek rtw88, R8188EU drivers
-- Atheros, MediaTek, Ralink, Zydas
-- Bluetooth HCI and USB networking
-- Monitor mode and packet injection
-
-**What this means for you:**
-- Kali NetHunter works perfectly
-- External WiFi adapters supported
-- Wireless auditing capabilities
-- Monitor mode for packet capture
-
----
-
-## 📦 WirelessKSU
-
-Separate KernelSU module containing wireless drivers and firmware when built as modules. Flash alongside the main kernel for full NetHunter support.
-
----
-
-## 🔥 LTO Options
-
-| Option | Description | Best For |
-|--------|-------------|----------|
-| **FullLTO** | Maximum performance, slower build | Gaming, performance |
-| **ThinLTO** | Faster build, good performance | Balanced |
-| **NoLTO** | Build compatibility | Problem devices |
-
----
-
-## 🔄 Compatibility
-
-**Use Compat if:**
-- You experience boot issues
-- Standard variants don't boot
-
----
-
-## 📥 Downloads
-
-**All releases:** [GitHub Releases](https://github.com/ahmed-alnassif/GKID-Kernels/releases)
-
-**Each release includes:**
-- 📦 AnyKernel3 flashable packages
-- 📦 WirelessKSU modules (when applicable)
-- 🔐 SHA256 and MD5 checksums
-- 📝 Build information and changelogs
-
----
-
-## 📡 TCP Congestion Control
-
-Switch congestion control algorithms (temporary, resets on reboot):
-
-```bash
-# Westwood+ - better for WiFi and mobile data
-su -c "sysctl -w net.ipv4.tcp_congestion_control=westwood"
-
-# BBRv3 - default, best for speed
-su -c "sysctl -w net.ipv4.tcp_congestion_control=bbr"
-```
-
-**Make permanent:** Create a script in `/data/adb/service.d/` with the sysctl command or use ReSuSFS.
-
----
-
-## Other Ways to Help
-
-- **Star the Repository** ⭐ - Helps others discover this project
-- **Share** 📢 - Spread the word in your community or forums
-- **Report Issues** 🐛 - Found a bug? Open an issue with detailed logs
-- **Contribute** 🔧 - Pull requests, suggestions, and feedback are always welcome
-
----
-
-## 💬 Community
-
-- **Telegram:** [@ahmed_alnassif_tg](https://t.me/ahmed_alnassif_tg)
-- **Discussions:** [GitHub Discussions](https://github.com/ahmed-alnassif/GKID-Kernels/discussions)
-- **Issues:** [GitHub Issues](https://github.com/ahmed-alnassif/GKID-Kernels/issues)
+- **Telegram Support:** [@FADELEES](https://t.me/FADELEES)
+- **Issue Tracker:** [GitHub Issues](https://github.com/ifoknr/GKID-Kernels/issues)
+- **Original Upstream Project:** [ahmed-alnassif/GKID-Kernels](https://github.com/ahmed-alnassif/GKID-Kernels)
 
 ---
 
 ## 📄 License
 
-See [LICENSE](LICENSE).
+Distributed under the GNU General Public License v2 (GPL-2.0). See [LICENSE](LICENSE) for more details.
