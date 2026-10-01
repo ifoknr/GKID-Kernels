@@ -8,11 +8,12 @@
 [![Device](https://img.shields.io/badge/Tested%20On-Galaxy%20Tab%20S10%20Ultra-007ec6?style=for-the-badge&logo=samsung&logoColor=white)](#-target-device--specifications)
 [![GKI Version](https://img.shields.io/badge/GKI-Kernel%206.1%20%7C%20Android%2014-success?style=for-the-badge&logo=linux&logoColor=white)](#-target-device--specifications)
 [![Processor](https://img.shields.io/badge/SoC-Dimensity%209300-orange?style=for-the-badge&logo=mediatek&logoColor=white)](#-target-device--specifications)
-[![Root](https://img.shields.io/badge/KernelSU--Next-Supported-10b981?style=for-the-badge&logo=linux&logoColor=white)](https://kernelsu.org)
+[![KernelSU](https://img.shields.io/badge/KernelSU--Next-v3.4.0-10b981?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/KernelSU-Next/KernelSU-Next/releases/tag/v3.4.0)
+[![ReSukiSU](https://img.shields.io/badge/ReSukiSU-Supported-E91E63?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ReSukiSU/ReSukiSU)
 [![SuSFS](https://img.shields.io/badge/SuSFS-v1.5.5-7c3aed?style=for-the-badge&logo=gitlab&logoColor=white)](#-integrated-patches--versions)
 [![Telegram](https://img.shields.io/badge/Telegram-@FADELEES-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/FADELEES)
 
-**⚡ High-performance, low-latency downstream GKI kernel fork** tailored specifically for the **Samsung Galaxy Tab S10 Ultra (MediaTek Dimensity 9300)**. Packed with KernelSU-Next, SuSFS, FullLTO, gaming-oriented scheduler tunings, and enhanced deep-sleep battery optimizations.
+**⚡ High-performance, low-latency downstream GKI kernel fork** tailored specifically for the **Samsung Galaxy Tab S10 Ultra (MediaTek Dimensity 9300)**. Packed with KernelSU-Next, ReSukiSU, SuSFS, FullLTO, gaming-oriented scheduler tunings, and enhanced deep-sleep battery optimizations.
 
 ---
 
@@ -22,6 +23,15 @@
 > This repository is an independent **downstream fork** of the original [GKID-Kernels by ahmed-alnassif](https://github.com/ahmed-alnassif/GKID-Kernels). 
 > - While upstream targets generic multi-version GKI devices, **this fork is specifically refactored, stripped of obsolete patches, and finely tuned for the MediaTek Dimensity 9300 All-Big-Core architecture and UFS 4.0 storage on the Galaxy Tab S10 Ultra.**
 > - Full credit goes to **Ahmed Al-Nassif** and the upstream Android Common Kernel (ACK) contributors.
+
+---
+
+## ⚡ Quick Start
+
+1. **Check** your kernel version in Settings → About Tablet / Phone
+2. **Download** matching variant package from [Releases](https://github.com/ifoknr/GKID-Kernels/releases)
+3. **Flash** using [Kernel Flasher](#-installation-guide-kernel-flasher) *(Always back up your stock boot image first!)*
+4. **Manage** SuSFS with [ReSuSFS](https://github.com/ahmed-alnassif/ReSuSFS) or [BERNE - SUSFS](https://github.com/rrr333nnn333/BRENE)
 
 ---
 
@@ -40,12 +50,22 @@
 
 ## 🧩 Integrated Patches & Versions
 
-| Patch / Component | Version / Branch | Purpose |
+| Kernel Patch | Version | Purpose & Integration Details |
 | :--- | :--- | :--- |
-| **KernelSU-Next** | `v1.0.5` (Next branch) | Kernel-space root implementation with low overhead and modern hooks. |
-| **SuSFS** | `v1.5.5` | Kernel-level VFS hiding and mount isolation against hardware root detection. |
+| **KernelSU-Next (Kernel Patch)** | `v3.4.0` | Kernel-space su implementation with modern syscall hooks and low overhead. |
+| **SuSFS (Kernel Patch)** | `v1.5.5` | Kernel-level VFS hiding and mount isolation against hardware root detection. |
 | **TCP BBRv3** | `v3 (Upstream backport)` | Google's congestion control algorithm for minimal jitter and stable gaming ping. |
-| **AnyKernel3** | `v3.0` | Universal packaging backend for clean flashable zip deployment. |
+
+---
+
+## 🔑 Root Management
+
+| Manager / Tool | Version | Purpose & Direct Links |
+| :--- | :--- | :--- |
+| [**KernelSU-Next Manager**](https://github.com/KernelSU-Next/KernelSU-Next/releases/tag/v3.4.0) | `v3.4.0` | Official app to manage root permissions, grants, and standalone modules. |
+| [**ReSukiSU Manager**](https://github.com/ReSukiSU/ReSukiSU/releases) | `Latest Release` | Enhanced manager supporting multi-manager setups and advanced root control. |
+| [**ReSuSFS WebUI**](https://github.com/ahmed-alnassif/ReSuSFS/releases) | `Latest Release` | WebUI and module interface for configuring SuSFS hiding scripts and toggles. |
+| [**BERNE - SUSFS**](https://github.com/rrr333nnn333/BRENE) | `Latest Release` | Dedicated companion script and profile manager for automated SuSFS setup. |
 
 ---
 
@@ -102,7 +122,7 @@
 
 | Feature | Description |
 | :--- | :--- |
-| **KernelSU-Next** | Stable kernel-based root with modern API support and minimal attack surface. |
+| **KernelSU-Next & ReSukiSU** | Reliable kernel-based root supporting modern APIs and flexible manager environments. |
 | **SuSFS Integration** | Advanced filesystem and mount hiding against app-level integrity checks. |
 | **SUS MAP/PATH/MOUNT** | Kernel-level isolation preventing path detection by banking and integrity apps. |
 | **Play Integrity Ready** | Compatible with modern attestation frameworks and device verification modules. |
@@ -113,7 +133,7 @@
 
 All releases are available on the [**GitHub Releases**](https://github.com/ifoknr/GKID-Kernels/releases) page:
 
-* 📦 **`GKID-Kernel-*.zip`**: AnyKernel3 flashable archive (Recommended).
+* 📦 **`GKID-Kernel-*.zip`**: Flashable archive configured for direct app deployment (Recommended).
 * 🖼️ **`boot-*.img`**: Raw GKI boot partition image for recovery/manual backup restoration.
 
 ---
@@ -127,7 +147,7 @@ All releases are available on the [**GitHub Releases**](https://github.com/ifokn
 ### Requirements & Compatibility:
 * **Tested & Verified Device:** Tested and confirmed running with rock-solid stability on the **Samsung Galaxy Tab S10 Ultra** on **Linux Kernel 6.1 (Android 14)**.
 * **GKI 6.1 Compatibility:** As a Generic Kernel Image, this build is fully compatible and safe to flash on **ANY Android device running Linux Kernel 6.1 on Android 14**.
-* **Root Access:** Root privileges via KernelSU-Next or Magisk.
+* **Root Access:** Root privileges via KernelSU-Next, ReSukiSU, or Magisk.
 * **Flashing Tool:** **Kernel Flasher** app by *fatalcoder524*: [Download Kernel Flasher v1.6.0+](https://github.com/fatalcoder524/KernelFlasher/releases).
 
 ### Flashing Steps:
