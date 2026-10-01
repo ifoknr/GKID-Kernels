@@ -5,7 +5,8 @@
 </p>
 
 [![Fork](https://img.shields.io/badge/Project-Downstream%20Fork-blueviolet?style=for-the-badge&logo=git&logoColor=white)](#-about-this-fork)
-[![Device](https://img.shields.io/badge/Device-Galaxy%20Tab%20S10%20Ultra-007ec6?style=for-the-badge&logo=samsung&logoColor=white)](#-target-device--specifications)
+[![Device](https://img.shields.io/badge/Tested%20On-Galaxy%20Tab%20S10%20Ultra-007ec6?style=for-the-badge&logo=samsung&logoColor=white)](#-target-device--specifications)
+[![GKI Version](https://img.shields.io/badge/GKI-Kernel%206.1%20%7C%20Android%2014-success?style=for-the-badge&logo=linux&logoColor=white)](#-target-device--specifications)
 [![Processor](https://img.shields.io/badge/SoC-Dimensity%209300-orange?style=for-the-badge&logo=mediatek&logoColor=white)](#-target-device--specifications)
 [![Root](https://img.shields.io/badge/KernelSU--Next-Supported-10b981?style=for-the-badge&logo=linux&logoColor=white)](https://kernelsu.org)
 [![SuSFS](https://img.shields.io/badge/SuSFS-v1.5.5-7c3aed?style=for-the-badge&logo=gitlab&logoColor=white)](#-integrated-patches--versions)
@@ -28,7 +29,8 @@
 
 | Property | Details |
 | :--- | :--- |
-| **Target Device** | Samsung Galaxy Tab S10 Ultra (Wi-Fi & 5G variants) |
+| **Tested Device** | Samsung Galaxy Tab S10 Ultra (Wi-Fi & 5G variants) |
+| **Kernel & OS** | Linux GKI 6.1 (Android 14) |
 | **SoC** | MediaTek Dimensity 9300 (4× Cortex-X4 + 4× Cortex-A720) |
 | **GPU** | ARM Immortalis-G720 MC12 |
 | **Storage Type** | UFS 4.0 (F2FS `/data` partition) |
@@ -122,10 +124,11 @@ All releases are available on the [**GitHub Releases**](https://github.com/ifokn
 > **MANDATORY BACKUP REQUIRED BEFORE FLASHING:**  
 > Modifying your kernel involves risks. **You MUST back up your stock `boot` (and `init_boot` if present) partition before flashing.** If you encounter a bootloop, restoring your backup via Kernel Flasher or fastboot is your safe return path.
 
-### Requirements:
-1. Samsung Galaxy Tab S10 Ultra running a compatible stock firmware base.
-2. Root access via KernelSU-Next or Magisk.
-3. **Kernel Flasher** app by *capntrips*: [Download Kernel Flasher](https://github.com/capntrips/KernelFlasher/releases).
+### Requirements & Compatibility:
+* **Tested & Verified Device:** Tested and confirmed running with rock-solid stability on the **Samsung Galaxy Tab S10 Ultra** on **Linux Kernel 6.1 (Android 14)**.
+* **GKI 6.1 Compatibility:** As a Generic Kernel Image, this build is fully compatible and safe to flash on **ANY Android device running Linux Kernel 6.1 on Android 14**.
+* **Root Access:** Root privileges via KernelSU-Next or Magisk.
+* **Flashing Tool:** **Kernel Flasher** app by *fatalcoder524*: [Download Kernel Flasher v1.6.0+](https://github.com/fatalcoder524/KernelFlasher/releases).
 
 ### Flashing Steps:
 
