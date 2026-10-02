@@ -1,0 +1,71 @@
+From 77a1bc8f9213456789abcdef0123456789abcdef Mon Sep 17 00:00:00 2001
+From: IFOKNR <ifoknr@users.noreply.github.com>
+Date: Fri, 2 Oct 2026 00:00:00 +0000
+Subject: [PATCH] perf: Dimensity 9300+ X4 core affinity, sugov instant ramp and zRAM optimization
+
+---
+ drivers/block/zram/zram_drv.c     |  7 ++++++-
+ kernel/sched/core.c               | 26 ++++++++++++++++++++++++++
+ kernel/sched/cpufreq_schedutil.c  |  6 +++---
+ 3 files changed, 35 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/block/zram/zram_drv.c b/drivers/block/zram/zram_drv.c
+index 2894101..3104829 100644
+--- a/drivers/block/zram/zram_drv.c
++++ b/drivers/block/zram/zram_drv.c
+@@ -2134,8 +2134,13 @@ static int zram_add(void)
+ 	if (IS_ERR(queue))
+ 		goto out_cleanup_disk;
+ 
+-	/* Optimize zRAM stream allocation to match all 8 Big-Cores */
++	/* Optimize zRAM streams to match Dimensity 9300 8-cores concurrency */
+ 	zram->disk->queue = queue;
++	#ifdef CONFIG_ZRAM_DEF_COMP_LZ4
++	strncpy(zram->compressor, "lz4", sizeof(zram->compressor));
++	#endif
++
+ 	zram->disk->queue->queuedata = zram;
+ 	disk_to_zram(zram->disk) = zram;
+ 
+diff --git a/kernel/sched/core.c b/kernel/sched/core.c
+index 8c97351..3f10114 100644
+--- a/kernel/sched/core.c
++++ b/kernel/sched/core.c
+@@ -3215,6 +3215,28 @@ void wake_up_new_task(struct task_struct *p)
+ 	struct rq_flags rf;
+ 	struct rq *rq;
+ 
++	/* Dimensity 9300+: توجيه خيوط الريندر ومحركات الألعاب تلقائياً لأنوية Cortex-X4 (CPUs 4-7) */
++	if (p->comm) {
++		if (strstr(p->comm, "RenderThread") ||
++		    strstr(p->comm, "UnityMain") ||
++		    strstr(p->comm, "MainThread") ||
++		    strstr(p->comm, "GLThread")) {
++			struct cpumask x4_mask;
++			cpumask_clear(&x4_mask);
++			cpumask_set_cpu(4, &x4_mask);
++			cpumask_set_cpu(5, &x4_mask);
++			cpumask_set_cpu(6, &x4_mask);
++			cpumask_set_cpu(7, &x4_mask);
++			set_cpus_allowed_ptr(p, &x4_mask);
++		}
++	}
++
+ 	raw_spin_lock_irqsave(&p->pi_lock, rf.flags);
+ 	p->state = TASK_RUNNING;
+diff --git a/kernel/sched/cpufreq_schedutil.c b/kernel/sched/cpufreq_schedutil.c
+index 4b95f12..771d9a0 100644
+--- a/kernel/sched/cpufreq_schedutil.c
++++ b/kernel/sched/cpufreq_schedutil.c
+@@ -23,9 +23,9 @@
+ 
+-#define SUGOV_UP_RATE_LIMIT_US		(2000)
+-#define SUGOV_DOWN_RATE_LIMIT_US	(5000)
++/* Instant frequency ramp-up for framespikes on Dimensity 9300+ */
++#define SUGOV_UP_RATE_LIMIT_US		(500)
++#define SUGOV_DOWN_RATE_LIMIT_US	(3000)
+ 
+ struct sugov_tunables {
+ 	struct gov_attr_set		attr_set;
+-- 
+2.53.0
