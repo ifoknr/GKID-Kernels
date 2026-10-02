@@ -27,7 +27,7 @@ on:
           - "All"
 
       GKI_BUILD_ID:
-        description: "Google AOSP Build ID (اتركه فارغاً لجلب أحدث بناء رسمي تلقائياً)"
+        description: "Google AOSP Build ID (اتركه فارغاً لجلب أحدث بناء معتمد تلقائياً)"
         required: false
         type: string
         default: ""
@@ -139,7 +139,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libdw-dev ccache gh bc bison flex libssl-dev libelf-dev dwarves cpio python3-lxml curl jq wget lz4 tar
+          sudo apt-get install -y libdw-dev ccache gh bc bison flex libssl-dev libelf-dev dwarves cpio python3-lxml curl jq wget unzip lz4 tar
 
       - name: Restore ccache from release
         if: github.event.inputs.TEST == 'no' && github.event.inputs.TODO != 'defconfig'
@@ -185,15 +185,14 @@ jobs:
       - name: Fetch Stock GKI & Repack boot.img
         if: github.event.inputs.TODO != 'defconfig'
         run: |
-          echo "⚙️ تجهيز أداة magiskboot للتجميع..."
-          mkdir -p gki_work/stock
-          cd gki_work
-          wget -qO magiskboot.tar.xz https://github.com/Magisk-Modules-Alt-Repo/magiskboot_ndk_on_linux/releases/latest/download/magiskboot.tar.xz
-          tar -xf magiskboot.tar.xz
+          echo "⬇️ جلب وتثبيت أداة magiskboot الرسمية من Magisk..."
+          curl -sL -o Magisk.apk https://github.com/topjohnwu/Magisk/releases/download/v27.0/Magisk-v27.0.apk
+          unzip -p Magisk.apk "lib/x86_64/libmagiskboot.so" > magiskboot
           chmod +x magiskboot
-          cd ..
+          sudo mv magiskboot /usr/local/bin/magiskboot
+          rm -f Magisk.apk
 
-          # تحديد فرع AOSP والـ Build ID الافتراضي بحسب إصدار النواة
+          # تحديد الفرع ورقم البناء المعتمد
           K_VER="${{ matrix.kernel_version }}"
           case "$K_VER" in
             "6.1")
@@ -223,33 +222,50 @@ jobs:
             BUILD_ID="$DEFAULT_BID"
           fi
 
-          echo "🌐 جلب Stock GKI boot.img ($BRANCH) برقم البناء: $BUILD_ID"
+          mkdir -p gki_repack/stock
           TARGET="kernel_aarch64"
-          URL="https://ci.android.com/builds/submitted/$BUILD_ID/$TARGET/latest/raw/boot-lz4.img"
-          HTTP_CODE=$(curl -sL -w "%{http_code}" -o "gki_work/stock/boot.img" "$URL")
+          DOWNLOAD_OK=false
 
-          if [ "$HTTP_CODE" -ne 200 ]; then
-            echo "⚠️ تعذر تنزيل نسخة lz4، جاري تنزيل نسخة boot.img غير المضغوطة..."
-            curl -fL -o "gki_work/stock/boot.img" "https://ci.android.com/builds/submitted/$BUILD_ID/$TARGET/latest/raw/boot.img" || true
+          # محاولة تنزيل النسخة المناسبة والتأكد من صحتها
+          for FILE_TYPE in "boot-lz4.img" "boot.img" "boot-gz.img"; do
+            URL="https://ci.android.com/builds/submitted/$BUILD_ID/$TARGET/latest/raw/$FILE_TYPE"
+            echo "🌐 محاولة تنزيل: $URL"
+            if curl -fL -sS -o "gki_repack/stock/boot.img" "$URL"; then
+              FILE_SIZE=$(wc -c < "gki_repack/stock/boot.img" 2>/dev/null || echo 0)
+              if [ "$FILE_SIZE" -gt 10000000 ]; then
+                echo "✅ تم تنزيل $FILE_TYPE بحجم: $FILE_SIZE بايت."
+                DOWNLOAD_OK=true
+                break
+              fi
+            fi
+          done
+
+          # البحث عن ملف النواة (أو استخراجه من أرشيف AnyKernel3 إذا وجد)
+          KERNEL_BIN=$(find out/ arch/arm64/boot/ . -maxdepth 4 -name "Image" -type f 2>/dev/null | grep -v "/\.git/" | head -n 1)
+
+          if [ -z "$KERNEL_BIN" ]; then
+            ZIP_TARGET=$(find artifacts/ -name "*.zip" -type f 2>/dev/null | head -n 1)
+            if [ -n "$ZIP_TARGET" ]; then
+              echo "📦 استخراج ملف Image من حزمة: $ZIP_TARGET..."
+              unzip -j -o "$ZIP_TARGET" "Image" -d ./ 2>/dev/null || unzip -j -o "$ZIP_TARGET" "Image.lz4" -d ./ 2>/dev/null || true
+              if [ -f "./Image" ]; then KERNEL_BIN="./Image"; fi
+            fi
           fi
 
-          # البحث عن ملف النواة المبني (Image أو Image.lz4)
-          KERNEL_BIN=$(find out/ arch/arm64/boot/ artifacts/ . -maxdepth 4 -name "Image" -type f 2>/dev/null | grep -v "/\.git/" | head -n 1)
-
-          if [ -f "gki_work/stock/boot.img" ] && [ -n "$KERNEL_BIN" ]; then
-            echo "💉 حقن ملف الكيرنل الجديد ($KERNEL_BIN) داخل boot.img..."
-            cd gki_work/stock
-            ../magiskboot unpack boot.img
+          if [ "$DOWNLOAD_OK" = "true" ] && [ -n "$KERNEL_BIN" ]; then
+            echo "🔧 حقن الكيرنل ($KERNEL_BIN) داخل boot.img..."
+            cd gki_repack/stock
+            magiskboot unpack boot.img
             cp "../../$KERNEL_BIN" ./kernel
-            ../magiskboot repack boot.img ../../boot-${{ matrix.name }}.img
+            magiskboot repack boot.img "../../boot-${{ matrix.name }}.img"
             cd ../..
 
             mkdir -p artifacts
             cp "boot-${{ matrix.name }}.img" artifacts/
-            echo "✅ تم إنتاج boot-${{ matrix.name }}.img بنجاح وجاهز للتفليش:"
+            echo "🎉 تم تجميع boot-${{ matrix.name }}.img بنجاح:"
             ls -lh "artifacts/boot-${{ matrix.name }}.img"
           else
-            echo "⚠️ تعذر إتمام الـ Repack: تأكد من تنزيل الـ boot الأصلي ووجود ملف Image مبني."
+            echo "⚠️ تخطي التجميع لعدم توفر صورة الـ Boot الأصلية أو ملف Image."
           fi
 
       - name: ccache stats
@@ -318,7 +334,7 @@ jobs:
 
   upload-all:
     needs: build
-    if: success()
+    if: always() && !cancelled() && contains(needs.build.result, 'success')
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
@@ -340,7 +356,7 @@ jobs:
 
   release:
     needs: [build, upload-all]
-    if: success() && github.event.inputs.TODO != 'defconfig'
+    if: always() && !cancelled() && contains(needs.build.result, 'success') && github.event.inputs.TODO != 'defconfig'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
@@ -375,6 +391,7 @@ jobs:
           name: ${{ env.RELEASE_NAME }}
           tag_name: ${{ env.RELEASE }}
           prerelease: true
+          fail_on_unmatched_files: false
           files: |
             release-artifacts/*.zip
             release-artifacts/*.img
