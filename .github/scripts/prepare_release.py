@@ -1,346 +1,183 @@
-#!/usr/bin/env python3
-
-import glob
 import os
-import re
-
-KERNEL_VERSION_ORDER = ["5.10", "5.15", "6.1", "6.6", "6.12"]
-
-
-def read_or_default(path, default="*No changelog available*"):
-	if os.path.isfile(path):
-		return open(path).read().rstrip("\n")
-	return default
-
-
-def slugify(text):
-	text = text.lower()
-	text = re.sub(r"[^\w\s-]", "", text)
-	text = re.sub(r"\s+", "-", text.strip())
-	return text
-
-
-def parse_env_file(path):
-	env = {}
-	with open(path) as f:
-		for line in f:
-			line = line.strip()
-			if "=" in line:
-				key, value = line.split("=", 1)
-				if key:
-					env[key] = value
-	return env
-
-
-def load_build_envs():
-	env_files = sorted(glob.glob("release-artifacts/build-env-*.txt"))
-	if not env_files:
-		raise SystemExit("ERROR: no build-env-*.txt files found in release-artifacts/")
-
-	all_builds = [parse_env_file(f) for f in env_files]
-
-	shared_env = {}
-	for key in ("RELEASE_REPO", "RELEASE", "RELEASE_NAME", "KERNEL_NAME"):
-		values = {b[key] for b in all_builds if b.get(key)}
-		if not values:
-			raise SystemExit(f"ERROR: missing required build-env value: {key}")
-		shared_env[key] = sorted(values)[0]
-
-	return all_builds, shared_env
-
-
-def kernel_versions_present(all_builds):
-	present = {b.get("KERNEL_VERSION") for b in all_builds if b.get("KERNEL_VERSION")}
-	ordered = [v for v in KERNEL_VERSION_ORDER if v in present]
-	ordered += sorted(present - set(ordered))
-	return ordered
-
-
-def variant_zip_name(build):
-	"""Reconstruct the exact zip filename build.sh produced for this job."""
-	base_name = build.get("BASE_NAME")
-	release = build.get("RELEASE")
-	linux_version = build.get("LINUX_VERSION")
-	if not (base_name and release and linux_version):
-		return None
-	return f"{base_name}-{release}-{linux_version}.zip"
-
-
-def variant_link(display_name, filename, repo, tag):
-	return f"- [{display_name}](https://github.com/{repo}/releases/download/{tag}/{filename})"
-
-
-def display_variant_name(build):
-	name = build.get("BUILD_VARIANT", "")
-	kver = build.get("KERNEL_VERSION", "")
-	prefix = f"{kver}-"
-	return name[len(prefix):] if name.startswith(prefix) else name
-
-
-def build_kernel_section(kernel_version, builds, repo, tag, existing_zips, inputs):
-	android_release = builds[0].get("ANDROID_RELEASE", "unknown")
-	label = f"Android{android_release}-{kernel_version}-LTS"
-	anchor_title = f"{label} Files"
-
-	representative = next((b for b in builds if b.get("KSU_SUSFS") == "true"), builds[0])
-
-	file_lines = []
-	for b in sorted(builds, key=lambda b: display_variant_name(b)):
-		zip_name = variant_zip_name(b)
-		if zip_name and zip_name in existing_zips:
-			file_lines.append(variant_link(display_variant_name(b), zip_name, repo, tag))
-	files_block = "\n".join(file_lines) if file_lines else "- *No build artifacts found*"
-
-	wireless_prefix = f"WirelessKSU-{kernel_version}-"
-	wireless_zips = sorted(z for z in existing_zips if z.startswith(wireless_prefix))
-	if inputs["nh"] != "true":
-		wireless_block = "None (NetHunter disabled for this run)"
-	elif wireless_zips:
-		wireless_block = "\n".join(
-			f"- [{z[:-4]}](https://github.com/{repo}/releases/download/{tag}/{z})"
-			for z in wireless_zips
-		)
-	else:
-		wireless_block = "*Built-in driver, no separate module needed*"
-
-	susfs_changelog_file = f"release-artifacts/susfs_changelog-{kernel_version}.txt"
-	susfs_version = representative.get("SUSFS_VERSION", "Not included")
-
-	anchor_id = slugify(label)
-	section = f"""<a name="{anchor_id}"></a>
-## {anchor_title}
-
-**Downloads:**
-{files_block}
-
-**Kali NetHunter KernelSU modules:**
-{wireless_block}
-
-**Build details:**
-- Linux version: {representative.get('LINUX_VERSION', 'unknown')}
-- Compiler: {representative.get('COMPILER_STRING', 'unknown')}
-- SuSFS: {susfs_version}
-
-**SuSFS changelog for this line (last 5 commits):**
-
-{read_or_default(susfs_changelog_file)}
-"""
-	return label, section
-
-
-def build_release_body():
-	all_builds, shared_env = load_build_envs()
-	repo = shared_env["RELEASE_REPO"]
-	tag = shared_env["RELEASE"]
-	release_name = shared_env["RELEASE_NAME"]
-
-	existing_zips = {os.path.basename(p) for p in glob.glob("release-artifacts/*.zip")}
-	versions = kernel_versions_present(all_builds)
-
-	inputs = {
-		"nh": os.environ.get("NH_INPUT", ""),
-		"nm": os.environ.get("NM_INPUT", ""),
-		"droidspaces": os.environ.get("DROIDSPACES_INPUT", ""),
-		"lto": os.environ.get("LTO_INPUT", ""),
-		"test": os.environ.get("TEST_INPUT", ""),
-	}
-	status_map = {"true": "Enabled", "false": "Disabled"}
-	cap_first = lambda s: s[0].upper() + s[1:] if s else s
-
-	warning = (
-		"> [!Warning]\n> This is a test release for pipeline debugging - please do not download or install.\n\n"
-		if inputs["test"] == "yes"
-		else ""
-	)
-
-	toc_entries = []
-	sections = []
-	for kv in versions:
-		builds_for_version = [b for b in all_builds if b.get("KERNEL_VERSION") == kv]
-		label, section = build_kernel_section(kv, builds_for_version, repo, tag, existing_zips, inputs)
-		toc_entries.append(f"- [{label}](#{slugify(label)})")
-		sections.append(section)
-
-	toc_block = "\n".join(toc_entries)
-	sections_block = "\n\n---\n\n".join(sections)
-
-	body = f"""{warning}### {release_name}
-
-## ❤️ Support This Project
-
-**[Donations](https://github.com/ahmed-alnassif#-support-my-work)**
-
-Your donations keep this project alive! I spend countless hours maintaining kernel builds for 5 different versions, fixing bugs, adding features, and supporting users. **Every donation matters!** 🙏
-
-- **[ReSuSFS](https://github.com/ahmed-alnassif/ReSuSFS)** – Root hiding made simple, powerful when you need it. A [KernelSU](https://kernelsu.org) module and WebUI that turns SuSFS into clean config files and toggle switches for everyday use, with **strong hiding applied out of the box** via built-in spoofing and hiding scripts for one-tap protection, plus a script manager for power users who want more, all without leaving the WebUI.
-
-- **Community:** join the discussion and get support on [Telegram](https://t.me/ahmed_alnassif_tg).
-
-**Run settings:**
-- LTO optimizations: {cap_first(inputs['lto']) or 'Unknown'}
-- Kali NetHunter: {status_map.get(inputs['nh'], 'Disabled')}
-- DroidSpaces: {status_map.get(inputs['droidspaces'], 'Disabled')}
-- NoMount: {status_map.get(inputs['nm'], 'Disabled')}
-
-> [!Important]
-> These are **GKI** kernels, not custom kernels. Each line below supports **all** devices that shipped with the matching Linux version and Android release (stock or AOSP).
-
-## 🧭 Which variant should I flash?
-
-| Variant | Root | SuSFS | LTO | Compat |
-|---------|------|-------|-----|--------|
-| Vanilla | ❌ | ❌ | Full | ❌ |
-| Vanilla+NoLTO | ❌ | ❌ | ❌ | ❌ |
-| KernelSU | ✅ | ❌ | Full | ❌ |
-| KernelSU+SuSFS | ✅ | ✅ | Full | ❌ |
-| KSU+SuSFS+MM | ✅ | ✅ | Full | ❌ |
-| ReSukiSU+SuSFS | ✅ | ✅ | Full | ❌ |
-| Compat+KSU+SuSFS | ✅ | ✅ | ❌ | ✅ |
-| Compat+ReSukiSU+SuSFS | ✅ | ✅ | ❌ | ✅ |
-
-**Not sure? Use a `Compat` variant first**: it fixes most boot issues. Full feature breakdown, LTO explanation, and troubleshooting live in the [README](https://github.com/ahmed-alnassif/GKID-Kernels#-build-variants).
-
-## Contents
-{toc_block}
-
----
-
-{sections_block}
-
----
-
->[!Note]
->- **Bootloop?** Flash a **Compat** variant first.
->- **Issues?** Check [Discussions](https://github.com/ahmed-alnassif/GKID-Kernels/discussions) before opening an issue.
-
----
-
-### Community & Support
-- **Have questions?** Start a [Discussion](https://github.com/ahmed-alnassif/GKID-Kernels/discussions)
-- **Found a bug?** Open an [Issue](https://github.com/ahmed-alnassif/GKID-Kernels/issues) with logs
-- **Enjoying the kernel?** Star the [repo](https://github.com/ahmed-alnassif/GKID-Kernels)
-
----
-
-**Performance & battery optimizations**
-Engineered for smoother UI, better multitasking, and gaming on Poco X6 Pro:
-
-**Performance**
-- 300Hz timer -> lower input lag, snappier feel
-- MGLRU -> better multitasking & battery life
-- Faster memory ops -> up to 50% faster string/memory handling
-- mq-deadline I/O -> low-latency on UFS 4.0 storage
-- CPU governors: schedutil + ondemand -> efficient & responsive
-- NTSync driver -> faster Windows games/apps on Winlator/GameHub
-
-**Network**
-- TCP BBRv3 + Westwood+ -> better WiFi/mobile data speeds
-- IPv6 NAT + IP Set -> better tethering & VPN
-
-**Battery life**
-- Wakelock cap: 500ms -> prevents battery drain
-- Freeze timeout: 20s -> 1s -> faster deadlock detection
-- ext4 commit age: 30s -> fewer disk writes
-- Minimized alarm wakeups -> less standby drain
-
-**Storage & filesystem**
-- F2FS tuning: reduced GC sleep (50ms) -> smoother I/O
-- ext4 optimization -> extended commit age
-
-**Security**
-- Baseband Guard (BBG) -> blocks unauthorized writes to critical partitions
-
----
-
-### Recommended companion modules
-Enhance your Poco X6 Pro with these modules designed for GKID kernels:
-
-| Module | Description | ROM |
-|--------|-------------|-----|
-| [**GPU Unlocker**](https://github.com/ahmed-alnassif/GPU-Unlocker) | Unlock Mali-G615 MC6 from 701MHz to 1.4GHz (100% boost) | HyperOS |
-| [**Thermal Manager**](https://github.com/ahmed-alnassif/Thermal-Manager) | Fix thermal mode reset. Force-persist Balanced, Battery Saver, Performance, or Gaming. Includes WebUI. | AOSP |
-| [**DSP AudioFix**](https://github.com/ahmed-alnassif/DSP-AudioFix) | Fix distorted audio on devices with Awinic smart amps | AOSP |
-
-> [!Tip]
-> HyperOS users: GPU Unlocker gives a large gaming performance boost.
-> AOSP users: Thermal Manager fixes a stock bug that resets your thermal mode.
-
----
-
->[!Tip]
->This kernel includes **TCP BBRv3** (default) and **Westwood+** congestion control algorithms.
->You can switch between them - changes are temporary and reset after reboot.
-
-**Switch to Westwood+ (better for some networks):**
-```bash
-su -c "sysctl -w net.ipv4.tcp_congestion_control=westwood"
-```
-
-**Restore BBRv3 (default):**
-```bash
-su -c "sysctl -w net.ipv4.tcp_congestion_control=bbr"
-```
-
-Test both and use whichever performs better on your network.
-> **Note:** to make the change permanent, create a script in `/data/adb/service.d/` with the sysctl command.
-
----
-**NoMount changelog (last 5 commits):**
-
-{read_or_default("release-artifacts/nomount_changelog.txt")}
-
-**Full commit history:** [Browse all commits](https://github.com/maxsteeel/nomount/commits/master)
-
----
-**KernelSU changelog (last 5 commits):**
-
-{read_or_default("release-artifacts/ksu_changelog.txt")}
-
-**Full commit history:** [Browse all commits](https://github.com/tiann/KernelSU/commits/main)
-
----
-**ReSukiSU changelog (last 5 commits):**
-
-{read_or_default("release-artifacts/ReSukiSU_changelog.txt")}
-
-**Full commit history:** [Browse all commits](https://github.com/ReSukiSU/ReSukiSU/commits/main)
-
----
-> [!Tip]
-> **Checksums:**
-> SHA256 checksums for all files in this release are available in [`checksums.txt`](https://github.com/{repo}/releases/download/{tag}/checksums.txt), attached below.
-"""
-	return body, versions, shared_env, all_builds
-	return body, versions, shared_env, all_builds
-
-
-def export_github_env(versions, shared_env, all_builds):
-	github_env = os.environ.get("GITHUB_ENV")
-	if not github_env:
-		return
-
-	multi_kernel = "true" if len(versions) > 1 else "false"
-	with open(github_env, "a") as f:
-		f.write(f"RELEASE_REPO={shared_env['RELEASE_REPO']}\n")
-		f.write(f"RELEASE={shared_env['RELEASE']}\n")
-		f.write(f"RELEASE_NAME={shared_env['RELEASE_NAME']}\n")
-		f.write(f"MULTI_KERNEL={multi_kernel}\n")
-		f.write(f"KERNEL_VERSIONS={','.join(versions)}\n")
-		if len(versions) == 1:
-			# Kept for the single-line Telegram caption path.
-			single = versions[0]
-			build = next(b for b in all_builds if b.get("KERNEL_VERSION") == single)
-			f.write(f"KERNEL_VERSION={single}\n")
-			f.write(f"ANDROID_RELEASE={build.get('ANDROID_RELEASE', 'unknown')}\n")
-
+import glob
+import datetime
+
+def get_env_var(filepath, key, default=""):
+    """قراءة متغير معين من ملفات بيئة البناء المخزنة"""
+    if not os.path.exists(filepath):
+        return default
+    with open(filepath, "r", encoding="utf-8") as f:
+        for line in f:
+            if line.startswith(f"{key}="):
+                return line.strip().split("=", 1)[1]
+    return default
 
 def main():
-	body, versions, shared_env, all_builds = build_release_body()
-	with open("release_body.md", "w") as f:
-		f.write(body)
-	export_github_env(versions, shared_env, all_builds)
-	print(f"[+] release_body.md written for lines: {', '.join(versions)}")
+    # البحث عن ملفات بيئة البناء المستخرجة من الـ Matrix
+    env_files = glob.glob("downloaded-artifacts/build-env-*.txt") or glob.glob("build-env-*.txt")
+    latest_env = env_files[0] if env_files else ""
 
+    # استخراج البيانات الديناميكية للبناء
+    linux_ver = get_env_var(latest_env, "LINUX_VERSION", "6.1-LTS")
+    susfs_ver = get_env_var(latest_env, "SUSFS_VERSION", "v1.5.5")
+    compiler = get_env_var(latest_env, "COMPILER_STRING", "Clang/LLVM (Android GKI Toolchain)")
+    run_num = os.environ.get("GITHUB_RUN_NUMBER", "1")
+    commit_sha = os.environ.get("GITHUB_SHA", "unknown")[:7]
+    build_date = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+    
+    lto_type = os.environ.get("LTO_INPUT", "fullLTO")
+    tag_name = f"v6.1-r{run_num}"
+    release_name = f"⚡ GKID Kernel v6.1-r{run_num} | Tab S10 Ultra (Dimensity 9300+)"
+
+    # قراءة البصمات (Checksums) لإدراجها تلقائياً
+    checksums_content = ""
+    for c_path in ["release-artifacts/checksums.txt", "checksums.txt"]:
+        if os.path.exists(c_path):
+            with open(c_path, "r", encoding="utf-8") as cf:
+                checksums_content = cf.read().strip()
+            break
+
+    # بناء نص صفحة الإصدار بالبادجات المدمجة الأنيقة (flat-square)
+    release_body = f"""# ⚡ GKID Kernel (Tab S10 Ultra Edition) — Build r{run_num}
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/ifoknr/GKID-Kernels/dev/docs/banner.png" alt="GKID Kernels Banner" width="100%">
+</p>
+
+<p align="center">
+  <a href="#-device-specifications"><img src="https://img.shields.io/badge/Device-Tab%20S10%20Ultra-007ec6?style=flat-square&logo=samsung&logoColor=white" alt="Device"></a>
+  <a href="#-device-specifications"><img src="https://img.shields.io/badge/GKI-Kernel%206.1-success?style=flat-square&logo=linux&logoColor=white" alt="GKI"></a>
+  <a href="#-device-specifications"><img src="https://img.shields.io/badge/SoC-Dimensity%209300+-orange?style=flat-square&logo=mediatek&logoColor=white" alt="SoC"></a>
+  <a href="#-performance--gaming"><img src="https://img.shields.io/badge/LTO-{lto_type}-red?style=flat-square&logo=llvm&logoColor=white" alt="LTO"></a>
+  <a href="#-security--root-hiding"><img src="https://img.shields.io/badge/SuSFS-{susfs_ver}-7c3aed?style=flat-square&logo=gitlab&logoColor=white" alt="SuSFS"></a>
+  <a href="https://t.me/FADELEES"><img src="https://img.shields.io/badge/Telegram-@FADELEES-2CA5E0?style=flat-square&logo=telegram&logoColor=white" alt="Telegram"></a>
+</p>
+
+**⚡ Automated CI/CD Release Build** tailored specifically for the **Samsung Galaxy Tab S10 Ultra (Dimensity 9300+)**. Integrated with KernelSU-Next, ReSukiSU, SuSFS {susfs_ver}, FullLTO compilation, and dedicated hardware schedulers.
+
+---
+
+## 📋 Build Metadata
+
+| Property | Value |
+| :--- | :--- |
+| **Release Tag** | `{tag_name}` |
+| **Commit** | `{commit_sha}` |
+| **Build Date** | `{build_date}` |
+| **Linux Kernel Base** | `Linux {linux_ver}` |
+| **Toolchain** | `{compiler}` |
+| **Pipeline Mode** | `{lto_type} Compilation` |
+
+---
+
+## 📱 Device Specifications
+
+| Property | Details |
+| :--- | :--- |
+| **Target Device** | Samsung Galaxy Tab S10 Ultra (Wi-Fi & 5G variants) |
+| **Kernel & OS** | Linux GKI 6.1 (Android 14) |
+| **SoC** | MediaTek Dimensity 9300+ (4× Cortex-X4 + 4× Cortex-A720) |
+| **Storage Subsystem** | UFS 4.0 (`none` direct I/O scheduler) |
+
+---
+
+## ⚡ Performance & Gaming
+
+| Feature | Description |
+| :--- | :--- |
+| **Aggressive EAS Tuning** | Tuned `sugov_ext` rate limits (500µs ramp) for instant CPU frequency scaling during frame spikes. |
+| **All-Big-Core Thread Affinity** | Prioritizes game render threads (`UnityMain`, `GameThread`) directly onto Cortex-X4 cores. |
+| **Zero-Overhead UFS 4.0 I/O** | `none` scheduler completely bypasses I/O queue latency on ultra-fast UFS 4.0 storage. |
+| **F2FS GC Suppression** | Silences aggressive garbage collection during screen-on time to eliminate micro-stutters. |
+| **Optimized zRAM Overhead** | High-throughput LZ4 compression with 8 concurrent streams to prevent CPU decompression stalls. |
+| **Stripped Debug Overhead** | Completely disabled `CONFIG_FTRACE`, `debugfs`, and tracing bloat for maximum raw game performance. |
+| **FullLTO Pipeline** | Whole-program Link-Time Optimization compiled with Clang for optimal execution cache. |
+
+---
+
+## 🔋 Battery Life & Deep Sleep
+
+| Feature | Description |
+| :--- | :--- |
+| **Wakelock Ceiling** | Enforced 500ms limit on runaway background services to curb idle drain. |
+| **Freeze Timeout** | Reduced task freeze timeout (20s → 1s) for near-instant suspend entry. |
+| **F2FS Sleep Tuning** | Postpones background filesystem maintenance to deep-sleep idle intervals. |
+| **Suspend Engine** | Optimized platform-level suspend/resume routines to maintain zero overnight drops. |
+
+---
+
+## 🌐 Low-Latency Networking
+
+| Feature | Description |
+| :--- | :--- |
+| **TCP BBRv3** | Google's congestion control engine backported for ultra-low latency and consistent ping. |
+| **FQ-CoDel** | Fair Queuing with Controlled Delay as default packet discipline to combat bufferbloat. |
+| **IPv4/IPv6 WireGuard** | WireGuard VPN protocol compiled directly in-kernel for line-rate secure tunneling. |
+| **IP Set & Netfilter** | Granular hardware-accelerated packet filtering and firewall match rules. |
+
+---
+
+## 🛡️ Security & Root Hiding
+
+| Feature | Description |
+| :--- | :--- |
+| **KernelSU-Next & ReSukiSU** | Kernel-space root engine supporting modern manager interfaces. |
+| **SuSFS Integration** | Advanced filesystem mount insulation preventing detection by banking and integrity systems. |
+| **AVC Log Spoofing** | Silently redirects root SELinux denials to standard `priv_app` domains in audit logs. |
+| **Multi-Manager Support** | In-kernel verification supporting official KernelSU-Next, ReSukiSU, and WKSU APK signatures. |
+
+---
+
+## 📦 Verified Artifacts & Checksums
+
+"""
+
+    if checksums_content:
+        release_body += f"""```text
+{checksums_content}
+```\n"""
+    else:
+        release_body += "*Checksums will be updated directly upon artifact generation.*\n"
+
+    release_body += """
+---
+
+## 🛠️ Quick Installation Guide
+
+> [!CAUTION]
+> **Always backup your current boot image before flashing!**
+
+1. **Kernel Flasher (Recommended):**
+   - Open **Kernel Flasher**, grant Superuser permissions, and create a backup of your stock boot.
+   - Go to **Flash**, select the downloaded `*.zip` archive, and confirm.
+   - Reboot your tablet.
+2. **Fastboot / Recovery (Alternative):**
+   - Flash the injected `boot-*.img` directly:
+     ```bash
+     fastboot flash boot boot-*.img
+     fastboot reboot
+     ```
+
+---
+
+## 💬 Community & Support
+
+- **Telegram:** [@FADELEES](https://t.me/FADELEES)
+- **Issues & Tracking:** [GitHub Issues](https://github.com/ifoknr/GKID-Kernels/issues)
+"""
+
+    # كتابة نص الإصدار إلى الملف الذي يقرأه الأكشن
+    with open("release_body.md", "w", encoding="utf-8") as f:
+        f.write(release_body)
+
+    # تصدير اسم الإصدار والـ Tag لـ GitHub Actions
+    github_env = os.environ.get("GITHUB_ENV")
+    if github_env and os.path.exists(github_env):
+        with open(github_env, "a", encoding="utf-8") as env_file:
+            env_file.write(f"RELEASE_NAME={release_name}\n")
+            env_file.write(f"RELEASE={tag_name}\n")
+
+    print(f"✅ Generated release_body.md successfully for {tag_name}")
 
 if __name__ == "__main__":
-	main()
+    main()
