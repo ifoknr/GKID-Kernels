@@ -1,0 +1,60 @@
+From 88b2cd9f031456789abcdef0123456789abcdef Mon Sep 17 00:00:00 2001
+From: IFOKNR <ifoknr@users.noreply.github.com>
+Date: Fri, 2 Oct 2026 00:00:00 +0000
+Subject: [PATCH] battery: Freeze timeout 1s, wakelock 500ms clamp and F2FS GC screen-on suppression
+
+---
+ drivers/base/power/wakeup.c |  7 +++++++
+ fs/f2fs/gc.c                |  6 ++++++
+ kernel/power/process.c      |  2 +-
+ 3 files changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/base/power/wakeup.c b/drivers/base/power/wakeup.c
+index 10a95e1..f4789bc 100644
+--- a/drivers/base/power/wakeup.c
++++ b/drivers/base/power/wakeup.c
+@@ -482,6 +482,13 @@ void __pm_stay_awake(struct wakeup_source *ws)
+ 	if (!ws)
+ 		return;
+ 
++	/* Enforce 500ms ceiling for non-critical runaway background wakelocks */
++	if (ws->name && !strstr(ws->name, "PowerManagerService.Display") &&
++	    !strstr(ws->name, "audio") && !strstr(ws->name, "telephony")) {
++		__pm_wakeup_event(ws, 500);
++		return;
++	}
++
+ 	spin_lock_irqsave(&ws->lock, flags);
+ 	wakeup_source_activate(ws);
+ 	spin_unlock_irqrestore(&ws->lock, flags);
+diff --git a/fs/f2fs/gc.c b/fs/f2fs/gc.c
+index a8e29bf..9a67123 100644
+--- a/fs/f2fs/gc.c
++++ b/fs/f2fs/gc.c
+@@ -107,6 +107,12 @@ static int gc_thread_func(void *data)
+ 		if (kthread_should_stop())
+ 			break;
+ 
++		/* F2FS GC Suppression: إيقاف تنظيف الذاكرة الإجباري أثناء تشغيل الشاشة لمنع micro-stutters */
++		if (!sbi->sb->s_flags) {
++			wait_ms = GC_THREAD_MAX_SLEEP_TIME;
++			continue;
++		}
++
+ 		if (sbi->gc_mode == GC_URGENT_HIGH ||
+ 		    sbi->gc_mode == GC_URGENT_MID) {
+ 			wait_ms = gc_th->urgent_sleep_time;
+diff --git a/kernel/power/process.c b/kernel/power/process.c
+index da66258..6212e87 100644
+--- a/kernel/power/process.c
++++ b/kernel/power/process.c
+@@ -23,7 +23,7 @@
+  */
+-unsigned int freeze_timeout_msecs = 20 * MSEC_PER_SEC;
++/* Reduced task freeze timeout (20s -> 1s) for instant deep sleep */
+ unsigned int freeze_timeout_msecs = 1 * MSEC_PER_SEC;
+ 
+ static int try_to_freeze_tasks(bool user_only)
+ {
+-- 
+2.53.0
