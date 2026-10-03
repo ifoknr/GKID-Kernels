@@ -48,12 +48,12 @@ def main():
   <a href="#-device-specifications"><img src="https://img.shields.io/badge/Device-Tab%20S10%20Ultra-007ec6?style=flat-square&logo=samsung&logoColor=white" alt="Device"></a>
   <a href="#-device-specifications"><img src="https://img.shields.io/badge/GKI-Kernel%206.1-success?style=flat-square&logo=linux&logoColor=white" alt="GKI"></a>
   <a href="#-device-specifications"><img src="https://img.shields.io/badge/SoC-Dimensity%209300+-orange?style=flat-square&logo=mediatek&logoColor=white" alt="SoC"></a>
-  <a href="#-performance--gaming"><img src="https://img.shields.io/badge/LTO-{lto_type}-red?style=flat-square&logo=llvm&logoColor=white" alt="LTO"></a>
+  <a href="#-performance--battery"><img src="https://img.shields.io/badge/LTO-{lto_type}-red?style=flat-square&logo=llvm&logoColor=white" alt="LTO"></a>
   <a href="#-security--root-hiding"><img src="https://img.shields.io/badge/SuSFS-{susfs_ver}-7c3aed?style=flat-square&logo=gitlab&logoColor=white" alt="SuSFS"></a>
   <a href="https://t.me/FADELEES"><img src="https://img.shields.io/badge/Telegram-@FADELEES-2CA5E0?style=flat-square&logo=telegram&logoColor=white" alt="Telegram"></a>
 </p>
 
-**⚡ Automated CI/CD Release Build** tailored specifically for the **Samsung Galaxy Tab S10 Ultra (Dimensity 9300+)**. Integrated with KernelSU-Next, ReSukiSU, SuSFS {susfs_ver}, FullLTO compilation, and dedicated hardware schedulers.
+**⚡ Automated CI/CD Release Build** tailored specifically for the **Samsung Galaxy Tab S10 Ultra (Dimensity 9300+)**. Integrated with KernelSU (official) or ReSukiSU, SuSFS {susfs_ver}, BBRv3 and {lto_type} compilation.
 
 ---
 
@@ -77,32 +77,19 @@ def main():
 | **Target Device** | Samsung Galaxy Tab S10 Ultra (Wi-Fi & 5G variants) |
 | **Kernel & OS** | Linux GKI 6.1 (Android 14) |
 | **SoC** | MediaTek Dimensity 9300+ (4× Cortex-X4 + 4× Cortex-A720) |
-| **Storage Subsystem** | UFS 4.0 (`none` direct I/O scheduler) |
+| **Storage Subsystem** | UFS 4.0 (F2FS `/data`) |
 
 ---
 
-## ⚡ Performance & Gaming
+## ⚡ Performance & Battery
 
 | Feature | Description |
 | :--- | :--- |
-| **Aggressive EAS Tuning** | Tuned `sugov_ext` rate limits (500µs ramp) for instant CPU frequency scaling during frame spikes. |
-| **All-Big-Core Thread Affinity** | Prioritizes game render threads (`UnityMain`, `GameThread`) directly onto Cortex-X4 cores. |
-| **Zero-Overhead UFS 4.0 I/O** | `none` scheduler completely bypasses I/O queue latency on ultra-fast UFS 4.0 storage. |
-| **F2FS GC Suppression** | Silences aggressive garbage collection during screen-on time to eliminate micro-stutters. |
-| **Optimized zRAM Overhead** | High-throughput LZ4 compression with 8 concurrent streams to prevent CPU decompression stalls. |
-| **Stripped Debug Overhead** | Completely disabled `CONFIG_FTRACE`, `debugfs`, and tracing bloat for maximum raw game performance. |
-| **FullLTO Pipeline** | Whole-program Link-Time Optimization compiled with Clang for optimal execution cache. |
+| **{lto_type} Pipeline** | Link-Time Optimization compiled with Clang. |
+| **I/O & Filesystem** | `mq-deadline` built in; F2FS with compression support. |
+| **MGLRU** | Multi-Gen LRU enabled by default for memory reclaim. |
 
----
-
-## 🔋 Battery Life & Deep Sleep
-
-| Feature | Description |
-| :--- | :--- |
-| **Wakelock Ceiling** | Enforced 500ms limit on runaway background services to curb idle drain. |
-| **Freeze Timeout** | Reduced task freeze timeout (20s → 1s) for near-instant suspend entry. |
-| **F2FS Sleep Tuning** | Postpones background filesystem maintenance to deep-sleep idle intervals. |
-| **Suspend Engine** | Optimized platform-level suspend/resume routines to maintain zero overnight drops. |
+Scheduler, wakelock, freezer and F2FS GC tunings come from the GKI-Duchamp-6.1 kernel source branch.
 
 ---
 
@@ -112,8 +99,8 @@ def main():
 | :--- | :--- |
 | **TCP BBRv3** | Google's congestion control engine backported for ultra-low latency and consistent ping. |
 | **FQ-CoDel** | Fair Queuing with Controlled Delay as default packet discipline to combat bufferbloat. |
-| **IPv4/IPv6 WireGuard** | WireGuard VPN protocol compiled directly in-kernel for line-rate secure tunneling. |
-| **IP Set & Netfilter** | Granular hardware-accelerated packet filtering and firewall match rules. |
+| **WireGuard** | In-kernel VPN tunneling, as shipped by GKI 6.1. |
+| **IP Set & Netfilter** | Packet filtering and firewall match rules, including IPv6 NAT. |
 
 ---
 
@@ -121,10 +108,10 @@ def main():
 
 | Feature | Description |
 | :--- | :--- |
-| **KernelSU-Next & ReSukiSU** | Kernel-space root engine supporting modern manager interfaces. |
+| **KernelSU & ReSukiSU** | Kernel-space root engine (one build per engine). |
 | **SuSFS Integration** | Advanced filesystem mount insulation preventing detection by banking and integrity systems. |
 | **AVC Log Spoofing** | Silently redirects root SELinux denials to standard `priv_app` domains in audit logs. |
-| **Multi-Manager Support** | In-kernel verification supporting official KernelSU-Next, ReSukiSU, and WKSU APK signatures. |
+| **Multi-Manager Support** | KSU builds accept the official KernelSU, WKSU, 5ec1cff, rsuntk and KOWX712 manager signatures. |
 
 ---
 

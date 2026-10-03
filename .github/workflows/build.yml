@@ -34,20 +34,17 @@ on:
 
       ROOT_ENGINE:
         description: "Choose Root Manager & Stealth Engine"
-        default: "KernelSU-Next-SUSFS"
+        default: "All"
         type: choice
         options:
-          - "KernelSU-Next-SUSFS"
+          - "All"
           - "ReSukiSU-SUSFS"
           - "Official-KSU-SUSFS"
 
-      nomount_engine:
-        description: "Choose NoMount / VFS Engine"
-        default: "NoMount-Suite-Prism"
-        type: choice
-        options:
-          - "NoMount-Suite-Prism"
-          - "None"
+      BUILD_COMPAT:
+        description: "Also build Compat (NoLTO) variants"
+        type: boolean
+        default: true
 
       LTO:
         description: "Enable LTO optimization"
@@ -99,6 +96,11 @@ jobs:
           export BUILD_VANILLA="false"
           export BUILD_KSU="false"
           export BUILD_KSU_SUSFS="true"
+          export ROOT_ENGINE="${{ inputs.ROOT_ENGINE }}"
+          export FORCE_NO_DS="true"
+          if [ "${{ inputs.BUILD_COMPAT }}" = "false" ]; then
+            export SKIP_COMPAT="true"
+          fi
           python3 py/generate-matrix.py >> "$GITHUB_OUTPUT"
 
   ensure-cache-release:
@@ -163,8 +165,6 @@ jobs:
           DROIDSPACES: false
           NH: false
           NM: ${{ inputs.NM }}
-          NOMOUNT_ENGINE: ${{ inputs.nomount_engine }}
-          ROOT_ENGINE: ${{ inputs.ROOT_ENGINE }}
           TODO: ${{ inputs.TODO }}
           TEST: ${{ inputs.TEST }}
           LTO: ${{ inputs.LTO }}
@@ -174,11 +174,9 @@ jobs:
           LOCALVERSION: "-IFOKNR-Kernel"
           KBUILD_BUILD_USER: "IFOKNR"
           KBUILD_BUILD_HOST: "Galaxy-Tab"
+          KERNEL_AUTHOR: "IFOKNR (based on GKID by Ahmed Al-Nassif)"
         run: |
           export GIT_CLONE_PROTECTION_ACTIVE=false
-          export LOCALVERSION="-IFOKNR-Kernel"
-          export KBUILD_BUILD_USER="IFOKNR"
-          export KBUILD_BUILD_HOST="Galaxy-Tab"
           chmod +x *.sh py/*.py
           ./build.sh
 

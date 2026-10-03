@@ -4,8 +4,13 @@ WORKDIR="$(pwd)"
 RELEASE_DIR="$WORKDIR/artifacts"
 
 KERNEL_NAME="GKID"
-USER="ahmed-alnassif"
-HOST="GKID"
+BUILD_USER="${KBUILD_BUILD_USER:-ahmed-alnassif}"
+BUILD_HOST="${KBUILD_BUILD_HOST:-GKID}"
+KERNEL_AUTHOR="${KERNEL_AUTHOR:-Ahmed Al-Nassif (ahmed-alnassif)}"
+# Kbuild appends the LOCALVERSION env var on its own; consume it here so the
+# suffix is set exactly once through CONFIG_LOCALVERSION.
+CUSTOM_LOCALVERSION="${LOCALVERSION:--${KERNEL_NAME}}"
+unset LOCALVERSION
 TIMEZONE="Asia/Damascus"
 ANYKERNEL_REPO="https://github.com/ahmed-alnassif/AK3-GKID"
 
@@ -19,7 +24,11 @@ RELEASE="$(date +v%y.%m.%d)${RUN_NUM}"
 
 mkdir -p $RELEASE_DIR
 
-GKI_RELEASES_REPO="https://github.com/ahmed-alnassif/GKID-Kernels"
+if [ -n "$GITHUB_REPOSITORY" ]; then
+  GKI_RELEASES_REPO="${GITHUB_SERVER_URL:-https://github.com}/$GITHUB_REPOSITORY"
+else
+  GKI_RELEASES_REPO="https://github.com/ahmed-alnassif/GKID-Kernels"
+fi
 AK3_ZIP_NAME="$KERNEL_NAME-VARIANT-REL-KVER.zip"
 OUTDIR="$WORKDIR/out"
 KSRC="$WORKDIR/ksrc"
@@ -110,6 +119,10 @@ fi
 generate_gh_changelog "maxsteeel/nomount" "master" 5 "$RELEASE_DIR/nomount_changelog.txt"
 generate_gh_changelog "tiann/KernelSU" "main" 5 "$RELEASE_DIR/ksu_changelog.txt"
 generate_gh_changelog "ReSukiSU/ReSukiSU" "main" 5 "$RELEASE_DIR/ReSukiSU_changelog.txt"
+
+# The token is only needed for the changelogs above. Drop it before running any
+# remote setup script (curl | bash) so a compromised upstream can't use it.
+unset GH_TOKEN GITHUB_TOKEN
 
 echo "::group::[*] Downloading Clang"
 CLANG_BIN="$WORKDIR/neutron-clang/bin"
@@ -241,10 +254,9 @@ if [ "$KSU" = "KSU" ]; then
     apply_patch_file "$PATCHES_DIR/0001-feat-escape-persistent_allow_list-to-kthread.patch"
     apply_patch_file "$PATCHES_DIR/0001-feat-supercalls-allow-userspace-to-pull-list-entries.patch"
     sed -i "/    git pull && echo \"\[+\] Repository updated.\"/d" "kernel/setup.sh"
-    git config --global user.email "mr.ahmed.nassif@gmail.com"
-    git config --global user.name "Ahmed Al-Nassif"
     git add .
-    git commit -m "susfs patch"
+    git -c user.name="$BUILD_USER" -c user.email="${BUILD_USER}@users.noreply.github.com" \
+      commit -m "susfs patch"
     cd ..
     bash "KernelSU/kernel/setup.sh" "main"
 
@@ -280,13 +292,13 @@ source "$WORKDIR/configs/gki_defconfig.sh"
 if [ "${TODO:-kernel}" = "kernel" ]; then
   LATEST_COMMIT_HASH=$(git rev-parse --short HEAD)
   SUFFIX="${RUN_NUM}-${LATEST_COMMIT_HASH}"
-  config --set-str CONFIG_LOCALVERSION "-${KERNEL_NAME}${SUFFIX}"
+  config --set-str CONFIG_LOCALVERSION "${CUSTOM_LOCALVERSION}${SUFFIX}"
   config --disable CONFIG_LOCALVERSION_AUTO
   sed -i 's/echo "+"/# echo "+"/g' scripts/setlocalversion
 fi
 
-export KBUILD_BUILD_USER="$USER"
-export KBUILD_BUILD_HOST="$HOST"
+export KBUILD_BUILD_USER="$BUILD_USER"
+export KBUILD_BUILD_HOST="$BUILD_HOST"
 export KBUILD_BUILD_TIMESTAMP=$(git -C $KSRC log -1 --format=%cd --date=format-local:'%a %b %d %T %z %Y')
 export KCFLAGS="-w"
 
@@ -469,7 +481,7 @@ git clone -q --depth=1 $ANYKERNEL_REPO anykernel
 
 AK3_ZIP_NAME=${AK3_ZIP_NAME//REL/$RELEASE}
 sed -i \
-  -e "s/kernel.string=.*/kernel.string=${KERNEL_NAME} ${RELEASE} ${LINUX_VERSION} ${VARIANT} by Ahmed Al-Nassif (ahmed-alnassif)/g" \
+  -e "s/kernel.string=.*/kernel.string=${KERNEL_NAME} ${RELEASE} ${LINUX_VERSION} ${VARIANT} by ${KERNEL_AUTHOR}/g" \
   -e "s/supported_kernel=\".*\"/supported_kernel=\"${KERNEL_VERSION}\"/g" \
   $WORKDIR/anykernel/anykernel.sh
 
