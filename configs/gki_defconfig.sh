@@ -7,17 +7,24 @@ function apply_config(){
   cat "$1" >> "$2"
 }
 
-if [ "$KSU" != "no" ]; then
+if [ "$KSU" != "no" ] && [ "$KSU" != "vnlto" ]; then
   # Base KSU Config & Dependencies
   echo "⚙️ Added KSU configuration"
-  cat >> "$DEFCONFIG" <<EOF
-CONFIG_KSU=y
-CONFIG_KPM=y
-EOF
+  echo "CONFIG_KSU=y" >> "$DEFCONFIG"
+fi
+
+# KPM is a SukiSU-Ultra feature; other KSU forks ignore it
+if [ "$KSU" = "SKSU" ]; then
+  echo "CONFIG_KPM=y" >> "$DEFCONFIG"
 fi
 
 echo "🧩 Adding Built-in Features"
 apply_config "$WORKDIR/configs/features.config" "$DEFCONFIG"
+
+if [ "$NM" = "true" ]; then
+  echo "📁 NoMount enabled"
+  echo "CONFIG_NOMOUNT=y" >> "$DEFCONFIG"
+fi
 
 if [ "$KSU_SUSFS" = "true" ]; then
   echo "🔧 Mode: SuSFS Hook Enabled"
@@ -27,6 +34,11 @@ fi
 if ! { kernel_version_eq "$KERNEL_VERSION" "5.10" || kernel_version_eq "$KERNEL_VERSION" "6.12"; }; then
   echo "⚙️ Adding Compatibility GKI Networking and Filesystem configs"
   apply_config "$WORKDIR/configs/compat.config" "$DEFCONFIG"
+fi
+
+if kernel_version_eq "$KERNEL_VERSION" "6.1" && [ "${CUSTOM_CONFIG:-true}" = "true" ]; then
+  echo "📱 Adding Tab S10 Ultra custom configs"
+  apply_config "$WORKDIR/configs/custom.config" "$DEFCONFIG"
 fi
 
 if [ "$C_LTO" != "true" ]; then

@@ -43,6 +43,12 @@ BUILD_CONFIGS: Dict[str, List[Dict[str, Any]]] = {
 
 ALL_KERNEL_VERSIONS: List[str] = ["5.10", "5.15", "6.1", "6.6", "6.12"]
 
+# ROOT_ENGINE workflow input -> KSU matrix value ("All" keeps every engine)
+ROOT_ENGINES: Dict[str, str] = {
+	"Official-KSU-SUSFS": "KSU",
+	"ReSukiSU-SUSFS": "RSKSU",
+}
+
 def get_env_bool(var_name: str, default: bool = False) -> bool:
 	"""Read environment variable as boolean."""
 	value = os.environ.get(var_name, "").strip().lower()
@@ -64,12 +70,35 @@ def resolve_kernel_versions() -> List[str]:
 
 	return [selected]
 
+def filter_variants(variants: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+	root_engine = os.environ.get("ROOT_ENGINE", "All").strip()
+	if root_engine and root_engine.lower() != "all":
+		if root_engine not in ROOT_ENGINES:
+			raise ValueError(
+				f"Unknown ROOT_ENGINE='{root_engine}'. "
+				f"Expected 'All' or one of: {', '.join(ROOT_ENGINES)}"
+			)
+		ksu = ROOT_ENGINES[root_engine]
+		variants = [v for v in variants if v["KSU"] in ("no", "vnlto", ksu)]
+
+	# When the workflow forces No_DS for every build, the "+NoDS" entries are
+	# identical to their siblings, so drop them instead of building twice.
+	if get_env_bool("FORCE_NO_DS"):
+		variants = [v for v in variants if v["No_DS"] != "true"]
+
+	if get_env_bool("SKIP_COMPAT"):
+		variants = [v for v in variants if v["KSU_COMPAT"] != "true"]
+
+	return variants
+
 def generate_matrix() -> Dict[str, List[Dict[str, Any]]]:
 	variant_entries = []
 
 	for env_var, configs in BUILD_CONFIGS.items():
 		if get_env_bool(env_var):
 			variant_entries.extend(configs)
+
+	variant_entries = filter_variants(variant_entries)
 
 	if not variant_entries:
 		raise ValueError(
