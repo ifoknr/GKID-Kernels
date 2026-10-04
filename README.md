@@ -8,12 +8,12 @@
 [![Device](https://img.shields.io/badge/Tested%20On-Galaxy%20Tab%20S10%20Ultra-007ec6?style=for-the-badge&logo=samsung&logoColor=white)](#-target-device--specifications)
 [![GKI Version](https://img.shields.io/badge/GKI-Kernel%206.1%20%7C%20Android%2014-success?style=for-the-badge&logo=linux&logoColor=white)](#-target-device--specifications)
 [![Processor](https://img.shields.io/badge/SoC-Dimensity%209300-orange?style=for-the-badge&logo=mediatek&logoColor=white)](#-target-device--specifications)
-[![KernelSU](https://img.shields.io/badge/KernelSU--Next-v3.4.0-10b981?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/KernelSU-Next/KernelSU-Next/releases/tag/v3.4.0)
+[![KernelSU](https://img.shields.io/badge/KernelSU-Official-10b981?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/tiann/KernelSU)
 [![ReSukiSU](https://img.shields.io/badge/ReSukiSU-Supported-E91E63?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ReSukiSU/ReSukiSU)
-[![SuSFS](https://img.shields.io/badge/SuSFS-v1.5.5-7c3aed?style=for-the-badge&logo=gitlab&logoColor=white)](#-integrated-patches--versions)
+[![SuSFS](https://img.shields.io/badge/SuSFS-gki--android14--6.1-7c3aed?style=for-the-badge&logo=gitlab&logoColor=white)](#-integrated-patches--versions)
 [![Telegram](https://img.shields.io/badge/Telegram-@FADELEES-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/FADELEES)
 
-**⚡ High-performance, low-latency downstream GKI kernel fork** tailored specifically for the **Samsung Galaxy Tab S10 Ultra (MediaTek Dimensity 9300)**. Packed with KernelSU-Next, ReSukiSU, SuSFS, FullLTO, gaming-oriented scheduler tunings, and enhanced deep-sleep battery optimizations.
+**⚡ High-performance, low-latency downstream GKI kernel fork** tailored specifically for the **Samsung Galaxy Tab S10 Ultra (MediaTek Dimensity 9300)**. Packed with KernelSU (official) or ReSukiSU, SuSFS, BBRv3, FullLTO and device-specific config tuning.
 
 ---
 
@@ -52,8 +52,9 @@
 
 | Kernel Patch | Version | Purpose & Integration Details |
 | :--- | :--- | :--- |
-| **KernelSU-Next (Kernel Patch)** | `v3.4.0` | Kernel-space su implementation with modern syscall hooks and low overhead. |
-| **SuSFS (Kernel Patch)** | `v1.5.5` | Kernel-level VFS hiding and mount isolation against hardware root detection. |
+| **KernelSU (Kernel Patch)** | `tiann/KernelSU` `main` | Official kernel-space su implementation (`KSU+SUSFS` builds). |
+| **ReSukiSU (Kernel Patch)** | `ReSukiSU/ReSukiSU` `main` | KernelSU fork with multi-manager support (`RSKSU+SUSFS` builds). |
+| **SuSFS (Kernel Patch)** | `gki-android14-6.1` branch tip | Kernel-level VFS hiding and mount isolation. The exact version is printed in each release's notes. |
 | **TCP BBRv3** | `v3 (Upstream backport)` | Google's congestion control algorithm for minimal jitter and stable gaming ping. |
 
 ---
@@ -62,48 +63,31 @@
 
 | Manager / Tool | Version | Purpose & Direct Links |
 | :--- | :--- | :--- |
-| [**KernelSU-Next Manager**](https://github.com/KernelSU-Next/KernelSU-Next/releases/tag/v3.4.0) | `v3.4.0` | Official app to manage root permissions, grants, and standalone modules. |
+| [**KernelSU Manager**](https://github.com/tiann/KernelSU/releases) | `Latest Release` | Official manager for `KSU+SUSFS` builds. Builds also accept the WKSU, 5ec1cff, rsuntk and KOWX712 manager signatures. |
 | [**ReSukiSU Manager**](https://github.com/ReSukiSU/ReSukiSU/releases) | `Latest Release` | Enhanced manager supporting multi-manager setups and advanced root control. |
 | [**ReSuSFS WebUI**](https://github.com/ahmed-alnassif/ReSuSFS/releases) | `Latest Release` | WebUI and module interface for configuring SuSFS hiding scripts and toggles. |
 | [**BERNE - SUSFS**](https://github.com/rrr333nnn333/BRENE) | `Latest Release` | Dedicated companion script and profile manager for automated SuSFS setup. |
 
 ---
 
-## ⚡ Performance & Gaming
+## ⚡ Performance & Battery
+
+What this repository adds on top of the GKI 6.1 source:
 
 | Feature | Description |
 | :--- | :--- |
-| **Aggressive EAS Tuning** | Tuned `sugov_ext` rate limits for instant CPU frequency ramp-up during frame spikes. |
-| **All-Big-Core Thread Affinity** | Prioritizes render and game engine threads directly onto Cortex-X4 cores. |
-| **Zero-Overhead UFS 4.0 I/O** | `none` I/O scheduler bypasses queue latency on ultra-fast UFS 4.0 storage. |
-| **F2FS GC Suppression** | Silences aggressive garbage collection during active screen-on time to eliminate micro-stutters. |
-| **Optimized zRAM Overhead** | Tuned memory compression parameters to eliminate CPU decompression stalls during heavy loads. |
-| **Stripped Debug Overhead** | Disabled `CONFIG_FTRACE`, debugfs, and excess tracing bloat to free raw CPU cycles for games. |
-| **FullLTO Compilation** | Built with Full Link-Time Optimization via Clang/LLVM for maximum pipeline efficiency. |
+| **FullLTO Compilation** | Built with Full Link-Time Optimization via Clang/LLVM (ThinLTO / no LTO selectable in CI). |
+| **I/O Schedulers** | `mq-deadline` built in, alongside the default `none` scheduler used on UFS. |
+| **F2FS** | Built-in F2FS with xattr, POSIX ACL and compression support. |
+| **MGLRU** | Multi-Gen LRU enabled by default for better memory reclaim under pressure. |
+| **CPU Governors** | `schedutil` (default) plus `ondemand` available. |
 
-**What this means for you:**
-- Rock-solid 120 FPS in competitive titles (*Call of Duty: Mobile*, etc.)
-- Zero micro-stutters during intensive combat and scene rendering
-- Snappier app launch times and instant touch response
-- Eliminates I/O bottlenecks without wearing down flash storage
-
----
-
-## 🔋 Battery Life
-
-| Feature | Description |
-| :--- | :--- |
-| **Wakelock Ceiling** | Enforced 500ms wakelock limit to prevent runaway background service drain. |
-| **Freeze Timeout** | Reduced task freeze timeout (20s → 1s) for faster sleep entry and deadlock detection. |
-| **F2FS Sleep Tuning** | Minimized idle Garbage Collection cycles to save power when the device is idle. |
-| **Alarm Timers** | Coalesced non-urgent background wakeups to reduce active wake periods. |
-| **Suspend Engine** | Optimized platform-level suspend/resume routines for minimal screen-off drain. |
-
-**What this means for you:**
-- Exceptional standby time and minimal overnight battery drop
-- Cool and efficient operation during multi-tasking
-- Long gaming sessions without sudden thermal throttling cliffs
-- Dependable all-day battery endurance
+> [!NOTE]
+> Scheduler, wakelock, freezer and F2FS GC tunings come from the kernel source
+> branch ([GKI-Duchamp-6.1](https://github.com/ahmed-alnassif/GKI-Duchamp-6.1)),
+> not from this repository. Debug options (`FTRACE`, `debugfs`, `SLUB_DEBUG`) and
+> `CONFIG_HZ` are deliberately left at their GKI values, because changing them
+> breaks the KMI and stops vendor modules from loading.
 
 ---
 
@@ -112,9 +96,9 @@
 | Feature | Description |
 | :--- | :--- |
 | **TCP BBRv3** | Default congestion control algorithm for low-latency network performance. |
-| **FQ CoDel** | Fair queuing with controlled delay to combat bufferbloat. |
-| **IP Set & Netfilter** | Advanced firewall and packet filtering capabilities. |
-| **IPv4/IPv6 WireGuard** | High-performance VPN tunneling support directly inside the kernel. |
+| **FQ CoDel** | Default queueing discipline (fair queuing with controlled delay) to combat bufferbloat. |
+| **IP Set & Netfilter** | Advanced firewall and packet filtering capabilities, including IPv6 NAT. |
+| **WireGuard** | In-kernel VPN tunneling, as shipped by GKI 6.1. |
 
 ---
 
@@ -122,10 +106,9 @@
 
 | Feature | Description |
 | :--- | :--- |
-| **KernelSU-Next & ReSukiSU** | Reliable kernel-based root supporting modern APIs and flexible manager environments. |
+| **KernelSU & ReSukiSU** | Kernel-based root, one build per engine. |
 | **SuSFS Integration** | Advanced filesystem and mount hiding against app-level integrity checks. |
 | **SUS MAP/PATH/MOUNT** | Kernel-level isolation preventing path detection by banking and integrity apps. |
-| **Play Integrity Ready** | Compatible with modern attestation frameworks and device verification modules. |
 
 ---
 
@@ -134,7 +117,7 @@
 All releases are available on the [**GitHub Releases**](https://github.com/ifoknr/GKID-Kernels/releases) page:
 
 * 📦 **`GKID-Kernel-*.zip`**: Flashable archive configured for direct app deployment (Recommended).
-* 🖼️ **`boot-*.img`**: Raw GKI boot partition image for recovery/manual backup restoration.
+* 🖼️ **`boot-*.img`**: The kernel repacked into a *generic* AOSP GKI boot image (not Samsung's stock boot). For the Tab S10 Ultra, prefer the AnyKernel `.zip`.
 
 ---
 
@@ -145,9 +128,9 @@ All releases are available on the [**GitHub Releases**](https://github.com/ifokn
 > Modifying your kernel involves risks. **You MUST back up your stock `boot` (and `init_boot` if present) partition before flashing.** If you encounter a bootloop, restoring your backup via Kernel Flasher or fastboot is your safe return path.
 
 ### Requirements & Compatibility:
-* **Tested & Verified Device:** Tested and confirmed running with rock-solid stability on the **Samsung Galaxy Tab S10 Ultra** on **Linux Kernel 6.1 (Android 14)**.
-* **GKI 6.1 Compatibility:** As a Generic Kernel Image, this build is fully compatible and safe to flash on **ANY Android device running Linux Kernel 6.1 on Android 14**.
-* **Root Access:** Root privileges via KernelSU-Next, ReSukiSU, or Magisk.
+* **Tested Device:** **Samsung Galaxy Tab S10 Ultra** on **Linux Kernel 6.1 (Android 14)**.
+* **Other GKI 6.1 devices:** Should work on Android 14 devices running a 6.1 GKI kernel, but vendor modules depend on the KMI of your stock kernel. Always keep your stock boot backup ready.
+* **Root Access:** Root privileges via KernelSU, ReSukiSU, or Magisk.
 * **Flashing Tool:** **Kernel Flasher** app by *fatalcoder524*: [Download Kernel Flasher v1.6.0+](https://github.com/fatalcoder524/KernelFlasher/releases).
 
 ### Flashing Steps:
